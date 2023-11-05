@@ -39,15 +39,47 @@ router.post('/', async (req, res) => {
 //Importálás
 router.post('/import', async (req, res) => {
     csvtojson()
-        .fromFile("./mintaCSV.csv")
-        .then(csv => {
-            User.insertMany(csv).then(function () {
-                console.log("Importálás sikeres")
-                res.json({ success: 'success'})
-            })
-        }).catch(function(error) {
-            console.log(error)
-        })
+    .fromFile("./mintaCSV.csv")
+    .then(async csv => {
+        let newData = 0;
+        let existingData = 0;
+        for (const record of csv) {
+            /* Megnézzük hogy az adatbázisban már szerepel-e a jelenleg beimportált adat */
+            const existingUser = await User.findOne({ studentId: record.studentId });
+            if (existingUser) {
+                existingData++;
+                if (record.name !== existingUser.name) {
+                    existingUser.name = record.name;
+                }
+
+                if (record.birthDate !== existingUser.birthDate) {
+                    existingUser.birthDate = record.birthDate;
+                }
+
+                if (record.class !== existingUser.class) {
+                    existingUser.class = record.class;
+                }
+
+                // Ha volt változás a már meglévő felhasználó adataiban, frissíti
+                if (
+                    existingUser.isModified('name') ||
+                    existingUser.isModified('birthDate') ||
+                    existingUser.isModified('class')
+                ) {
+                    await existingUser.save();
+                }
+            } else {
+                //Ha nem létezik az adott user, akkor hozzáadjuk és megszámoljuk
+                newData++
+                await User.create(record);
+            }
+
+        }
+        res.json({ success: 'Importálás sikeres (' + newData + ') elem hozzáadva. ' + existingData + ' elem már szerepelt az adatbázisban.' });
+    })
+    .catch(function (error) {
+        console.log(error)
+    })
 })
 
 //Módosítás

@@ -15,13 +15,15 @@ const userSchema = new mongoose.Schema({
     },
     studentId: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     userCreatedAt: {
         type: Date,
         default: Date.now
     }
 })
+
 
 const User = mongoose.model('User', userSchema)
 
